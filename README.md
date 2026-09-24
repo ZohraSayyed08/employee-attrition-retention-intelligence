@@ -1,0 +1,136 @@
+# Employee Attrition & Retention Intelligence
+
+> **AICTE | IBM SkillsBuild Data Analytics with AI Internship 2026**
+> Author: Zohra
+
+---
+
+## Project Overview
+
+This project is a complete end-to-end data analytics investigation into **why employees leave**, built on the IBM HR Analytics Employee Attrition dataset. It delivers an interactive, four-tab Streamlit dashboard covering exploratory analysis, compound-risk segmentation, and a logistic regression model — packaged together so that findings can be acted on by management without any coding knowledge.
+
+---
+
+## Problem Statement
+
+Employee turnover is one of the most controllable costs a business faces, yet most organisations address it reactively. This project asks:
+
+- **Which factors drive attrition most strongly?** (Overtime, tenure, income, job role)
+- **Do certain combinations of factors create disproportionate risk?** (Compound-segment analysis)
+- **Can a simple, explainable model confirm and rank those drivers?** (Logistic Regression)
+- **What concrete actions should management take?**
+
+---
+
+## Dataset
+
+| Property | Detail |
+|---|---|
+| **Name** | IBM HR Analytics Employee Attrition & Performance |
+| **Source** | [Kaggle — pavansubhasht](https://www.kaggle.com/datasets/pavansubhasht/ibm-hr-analytics-attrition-dataset) |
+| **Origin** | Fictional dataset created by IBM data scientists |
+| **Rows** | 1,470 employees |
+| **Columns** | 35 original features (4 dropped during cleaning) |
+| **Target** | `Attrition` (Yes / No) |
+
+**Preprocessing steps:**
+- Dropped four zero-information columns: `EmployeeCount`, `StandardHours`, `Over18`, `EmployeeNumber` (all constant or pure identifiers)
+- Created binary target column `Left` (1 = Yes, 0 = No)
+- No missing values were present in the source data
+
+---
+
+## Tech Stack
+
+| Layer | Library / Tool |
+|---|---|
+| Data manipulation | `pandas`, `numpy` |
+| Visualisation | `matplotlib` |
+| Machine learning | `scikit-learn` (LogisticRegression, StandardScaler, train_test_split) |
+| Dashboard | `streamlit` |
+| Language | Python 3.9+ |
+
+---
+
+## Key Findings
+
+### Overall KPIs
+- **1,470** employees analysed; **16.1%** overall attrition rate (**237 leavers**)
+
+### Top Attrition Drivers
+| Driver | Finding |
+|---|---|
+| **Overtime** | Overtime employees leave at ~3× the rate of those who don't (30.5% vs 10.4%) |
+| **Job Role** | Sales Representatives have the highest attrition of any role: **39.8%** |
+| **Tenure** | Risk is front-loaded — employees in years 0–1 have the highest departure rate; it drops sharply after year 3 |
+| **Income** | Lowest-paid quartile leaves at ~3× the rate of the highest-paid quartile |
+
+### High-Risk Compound Segment
+Employees who simultaneously **work overtime**, have **≤ 3 years tenure**, and are at **entry job level (Level 1)**:
+
+| Metric | Value |
+|---|---|
+| Segment size | **86 employees** (5.8% of workforce) |
+| Segment attrition rate | **59.3%** (vs 16.1% company average) |
+| Share of *all* company leavers | **21.5%** from this one small group |
+
+> This is the single highest-leverage group for a targeted retention intervention.
+
+### Logistic Regression Model (Confirmation Layer)
+| Metric | Score |
+|---|---|
+| Accuracy | **77.7%** |
+| Recall | **64.4%** (of actual leavers correctly identified) |
+| Precision | **38.4%** |
+| F1 Score | **48.1%** |
+
+Model confirms the same drivers independently identified through exploratory analysis.
+
+### Business Recommendations
+1. **Monitor and cap overtime for new, entry-level employees** — highest ROI retention action
+2. **Audit the Sales Representative role** — workload, incentive structure, or role design
+3. **Extend stock option eligibility earlier** — linked to significantly lower attrition
+4. **Review bottom-quartile pay bands** — relative underpayment tracks closely with leaving
+5. **Formalise a first-3-year retention check-in programme** — risk is heavily front-loaded
+
+---
+
+## How to Run
+
+**Prerequisites:** Python 3.9+ installed
+
+```bash
+# 1. Clone / download this repository
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Launch the dashboard
+streamlit run ZohraSayyed_EmployeeAttritionRetentionIntelligence.py
+```
+
+The app will open automatically in your default browser at `http://localhost:8501`.
+
+> The CSV file `WA_Fn-UseC_-HR-Employee-Attrition.csv` must be in the **same directory** as `ZohraSayyed_EmployeeAttritionRetentionIntelligence.py`.
+
+---
+
+## Project Structure
+
+```
+project/
+├── ZohraSayyed_EmployeeAttritionRetentionIntelligence.py   # All analysis + dashboard code (single file)
+├── WA_Fn-UseC_-HR-Employee-Attrition.csv   # Raw dataset (from Kaggle)
+├── requirements.txt                        # Python dependencies
+└── README.md                               # This file
+```
+
+---
+
+## Limitations
+
+1. **Correlation, not causation** — all findings show statistical association; no causal claim can be made without a controlled study or intervention data.
+2. **Fictional dataset** — the data was synthetically generated by IBM data scientists and may not reflect any real organisation's dynamics; results should not be generalised without validation on real HR data.
+3. **Static snapshot** — the dataset has no timestamps beyond tenure fields; trends over time cannot be tracked.
+4. **Class imbalance** — only ~16% of employees left; the model uses `class_weight="balanced"` to compensate, but precision is consequently lower than recall.
+5. **Single model** — only Logistic Regression was used (chosen for explainability); a more complex ensemble might predict better but would be harder to interpret in a business context.
+6. **No demographic analysis** — age and gender fields exist in the dataset but were not the focus of this investigation; they may warrant a follow-up analysis.
