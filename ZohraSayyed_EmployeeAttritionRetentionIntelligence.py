@@ -1,7 +1,7 @@
 """
 Employee Attrition & Retention Intelligence Dashboard
 -------------------------------------------------------
-Author: Zohra
+Author: Zohra Sayyed Abed Ali
 Internship: AICTE | IBM SkillsBuild Data Analytics with AI Internship 2026
 
 WHAT THIS FILE DOES (in order):
