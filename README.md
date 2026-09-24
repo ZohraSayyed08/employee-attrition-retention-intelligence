@@ -1,7 +1,7 @@
 # Employee Attrition & Retention Intelligence
 
 > **AICTE | IBM SkillsBuild Data Analytics with AI Internship 2026**
-> Author: Zohra
+> Author: Zohra Sayyed Abed Ali
 
 ---
 
