@@ -1,7 +1,7 @@
 """
 Employee Attrition & Retention Intelligence Dashboard
 -------------------------------------------------------
-Author: Zohra Sayyed Abed Ali
+Author: Zohra
 Internship: AICTE | IBM SkillsBuild Data Analytics with AI Internship 2026
 
 WHAT THIS FILE DOES (in order):
@@ -51,16 +51,18 @@ overall_rate = df["Left"].mean()
 # ---------------------------------------------------------
 # STEP 3: KPI + DRIVER CALCULATIONS
 # ---------------------------------------------------------
-def rate_by(dataframe, col, bins=None, labels=None):
+def rate_by(dataframe, col, bins=None, labels=None, right=True):
     d = dataframe.copy()
     if bins is not None:
-        d[col] = pd.cut(d[col], bins=bins, labels=labels)
+        d[col] = pd.cut(d[col], bins=bins, labels=labels, right=right)
     return (d.groupby(col)["Left"].mean() * 100).round(1)
 
 overtime_rates = rate_by(df, "OverTime")
 jobrole_rates = rate_by(df, "JobRole").sort_values(ascending=True)
-tenure_rates = rate_by(df, "YearsAtCompany", bins=[-1, 1, 3, 6, 10, 40],
-                        labels=["0-1yr", "2-3yr", "4-6yr", "7-10yr", "10+yr"])
+# Tenure groups use left-inclusive bins, e.g. [0,2) = 0-1 years and [10,100) = 10 or more years,
+# so every employee falls into exactly one group and "10+yr" really means 10 or more years.
+tenure_rates = rate_by(df, "YearsAtCompany", bins=[0, 2, 4, 7, 10, 100], right=False,
+                        labels=["0-1yr", "2-3yr", "4-6yr", "7-9yr", "10+yr"])
 
 income_df = df.copy()
 income_df["IncomeQ"] = pd.qcut(income_df["MonthlyIncome"], 4,
@@ -101,6 +103,10 @@ def train_model(dataframe):
         "precision": precision_score(y_test, y_pred),
         "recall": recall_score(y_test, y_pred),
         "f1": f1_score(y_test, y_pred),
+        # Share of the test set that stayed: accuracy of a model that predicts "stays" for everyone
+        "baseline_accuracy": 1 - y_test.mean(),
+        "n_test": len(y_test),
+        "n_test_leavers": int(y_test.sum()),
     }
 
     coefs = pd.Series(model.coef_[0], index=X_encoded.columns).sort_values()
@@ -136,7 +142,10 @@ with tab1:
     ax.bar(tenure_rates.index.astype(str), tenure_rates.values, color="#4C72B0")
     ax.set_ylabel("Attrition Rate (%)")
     st.pyplot(fig)
-    st.caption("Attrition risk is heavily front-loaded: new employees are far more likely to leave than tenured ones.")
+    st.caption(
+        f"Observed attrition is highest in the first year ({tenure_rates.iloc[0]}%) and is lower for longer-serving "
+        f"employees, down to {tenure_rates.iloc[-1]}% for those with 10 or more years."
+    )
 
 # --- TAB 2: DRIVER ANALYSIS ---
 with tab2:
@@ -150,7 +159,10 @@ with tab2:
         for i, v in enumerate(overtime_rates.values):
             ax.text(i, v + 0.5, f"{v}%", ha="center", fontweight="bold")
         st.pyplot(fig)
-        st.caption("Employees working overtime leave at nearly 3x the rate of those who don't.")
+        st.caption(
+            f"Observed attrition is {overtime_rates['Yes']}% among employees who work overtime vs "
+            f"{overtime_rates['No']}% among those who don't. This is an association, not proof that overtime causes attrition."
+        )
 
     with col2:
         st.subheader("Attrition by Income Quartile")
@@ -158,7 +170,10 @@ with tab2:
         ax.bar(income_rates.index.astype(str), income_rates.values, color="#4C72B0")
         ax.set_ylabel("Attrition Rate (%)")
         st.pyplot(fig)
-        st.caption("The lowest-paid quartile leaves at nearly 3x the rate of the top quartile.")
+        st.caption(
+            f"Observed attrition is {income_rates.iloc[0]}% in the lowest income quartile vs "
+            f"{income_rates.iloc[-1]}% in the highest. This is an association; the data do not show why."
+        )
 
     st.subheader("Attrition by Job Role")
     fig, ax = plt.subplots(figsize=(9, 5))
@@ -166,7 +181,7 @@ with tab2:
     ax.barh(jobrole_rates.index, jobrole_rates.values, color=colors)
     ax.set_xlabel("Attrition Rate (%)")
     st.pyplot(fig)
-    st.caption("Sales Representatives show by far the highest attrition rate of any role (39.8%).")
+    st.caption(f"Highest observed attrition of any role: {jobrole_rates.idxmax()} ({jobrole_rates.max()}%).")
 
 # --- TAB 3: HIGH-RISK SEGMENT ---
 with tab3:
@@ -195,15 +210,15 @@ with tab3:
 
     st.info(
         f"**Business takeaway:** Just {high_risk_count} employees ({high_risk_count/len(df):.1%} of the "
-        f"workforce) account for {pct_of_leavers:.1f}% of all attrition. This is the single highest-leverage "
+        f"workforce) account for {pct_of_leavers:.1f}% of all attrition. This is a priority "
         f"group for a retention intervention."
     )
 
 # --- TAB 4: MODEL & RECOMMENDATIONS ---
 with tab4:
-    st.subheader("Logistic Regression Model (Confirms & Ranks Drivers)")
+    st.subheader("Logistic Regression Model (Supporting Analysis)")
     st.caption(
-        "A simple, explainable statistical model used to confirm which factors matter most "
+        "A simple, explainable statistical model used to check which factors are associated with attrition "
         "when considered together, not to replace the analysis above."
     )
 
@@ -224,21 +239,33 @@ with tab4:
         fig, ax = plt.subplots(figsize=(5, 4))
         ax.barh(top_protective_factors.index, top_protective_factors.values, color="#4C72B0")
         st.pyplot(fig)
+    st.caption(
+        f"Accuracy note: because only about {overall_rate:.0%} of employees left, a model that predicted \"stays\" for "
+        f"everyone would score {metrics['baseline_accuracy']:.1%} accuracy on this test set, so recall and precision are "
+        f"more informative here. The test set has {metrics['n_test']} employees, {metrics['n_test_leavers']} of whom left, "
+        f"so these figures are indicative rather than precise."
+    )
+    st.caption(
+        "Bars show standardised logistic-regression coefficients. They describe associations in this dataset, not proven "
+        "causes, and each is estimated holding the other factors constant, so it can differ from the simple comparisons "
+        "in other tabs (for example, JobLevel is closely related to income and experience)."
+    )
 
     st.markdown("---")
     st.subheader("Business Recommendations")
     st.markdown(
         """
-        1. **Monitor and cap overtime for new, entry-level employees** — this group drives
-           disproportionate attrition; a workload review here likely has the highest ROI.
-        2. **Review the Sales Representative role** — investigate whether workload, incentive
-           structure, or role design is driving nearly 4 in 10 to leave.
-        3. **Extend stock option eligibility earlier**, especially to entry-level staff — data
-           shows a clear link between having any stock options and staying longer.
-        4. **Review bottom-quartile pay bands** — being underpaid relative to peers tracks
-           closely with attrition, more than low pay in isolation.
-        5. **Build a formal first-3-year retention check-in program** — since risk is heavily
-           front-loaded, early intervention has outsized impact.
+        *Proposed actions for further investigation and evaluation. None has been tested in this project.*
+
+        1. **Review overtime workload for new, entry-level employees** — this group accounts for a
+           disproportionate share of observed attrition, so it is a sensible place to start (for example,
+           by reviewing or, if appropriate, capping overtime).
+        2. **Review the Sales Representative role** — observed attrition is highest in this role; investigate
+           whether workload, incentive structure, or role design play a part.
+        3. **Review bottom-quartile pay bands** — attrition is highest in the lowest income
+           quartile in this dataset, so this group warrants a closer look.
+        4. **Consider a structured check-in programme during the first three years** — observed attrition
+           is highest early in tenure, so this is where an intervention could be piloted and its effect measured.
         """
     )
     st.caption(
