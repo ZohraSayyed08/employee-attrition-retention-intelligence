@@ -1,4 +1,5 @@
 # Employee Attrition & Retention Intelligence
+![Dashboard: high-risk segment](1-high-risk-segment.png)
 
 > **AICTE | IBM SkillsBuild Data Analytics with AI Internship 2026**
 > Author: Zohra Sayyed Abed Ali 
